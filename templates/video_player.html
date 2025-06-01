@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Emotion-Based Image</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="/static/styles.css"/>
+</head>
+<body>
+    <h1>Emotion: {{ emotion }}</h1>
+    <img src="{{ url_for('static', filename='images/' + image_path) }}" alt="{{ emotion }}" width="720" height="480" />
+</body>
+</html>

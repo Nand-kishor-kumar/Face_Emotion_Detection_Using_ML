@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Emotion & Gender Detection</title>
+    <!-- Use only one link with url_for for static files -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+<body>
+    <div class="container">
+        <h1>Real-Time Emotion & Gender Detection</h1>
+        <button id="startBtn">Start Detection</button>
+        <button id="stopBtn" disabled>Stop Detection</button>
+
+        <div id="video-container" style="display:none;">
+            <!-- Use video tag or img based on your backend streaming -->
+            <img id="video-stream" alt="Webcam video will appear here" />
+        </div>
+
+        <div id="quote">Click Start to begin detection.</div>
+        <div id="gender" style="margin-top:15px; font-size: 1.2rem; font-weight: 600;"></div>
+    </div>
+
+    <script>
+        const videoStream = document.getElementById('video-stream');
+        const quoteDiv = document.getElementById('quote');
+        const genderDiv = document.getElementById('gender');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const videoContainer = document.getElementById('video-container');
+
+        let detectionActive = false;
+        let detectionInterval;
+        let detectionTimeout;
+        let emotionsDetected = [];
+        let gendersDetected = [];
+
+        async function detectAndShow() {
+            if (!detectionActive) return;
+
+            try {
+                const response = await fetch('/quote');
+                if (response.ok) {
+                    const data = await response.json();
+                    emotionsDetected.push(data.emotion);
+                    gendersDetected.push(data.gender);
+                    quoteDiv.textContent = `${data.quote} ${data.emoji}`;
+                    genderDiv.textContent = `Detected Gender: ${data.gender}`;
+                    console.log("Detected Emotion:", data.emotion, "Gender:", data.gender);
+                } else {
+                    quoteDiv.textContent = 'Failed to get data from server.';
+                }
+            } catch (e) {
+                quoteDiv.textContent = 'Error fetching data.';
+                console.error('Fetch error:', e);
+            }
+        }
+
+        function getMostFrequentEmotion(emotionList) {
+            const count = {};
+            let mostCommon = 'neutral';
+            let max = 0;
+            for (const emo of emotionList) {
+                count[emo] = (count[emo] || 0) + 1;
+                if (count[emo] > max) {
+                    max = count[emo];
+                    mostCommon = emo;
+                }
+            }
+            return mostCommon;
+        }
+
+        function stopWebcam() {
+            videoStream.removeAttribute('src');
+            videoStream.style.display = 'none';
+            videoContainer.style.display = 'none';
+        }
+
+        startBtn.addEventListener('click', () => {
+            detectionActive = true;
+            emotionsDetected = [];
+            gendersDetected = [];
+
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            quoteDiv.textContent = 'Detecting emotion and gender...';
+            genderDiv.textContent = '';
+            // Make sure '/video' route works in Flask and serves your video stream or image updates
+            videoStream.src = '/video';
+            videoContainer.style.display = 'block';
+
+            detectAndShow();
+            detectionInterval = setInterval(detectAndShow, 1500);
+
+            detectionTimeout = setTimeout(() => {
+                if (detectionActive) {
+                    clearInterval(detectionInterval);
+                    detectionActive = false;
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                    stopWebcam();
+
+                    const finalEmotion = getMostFrequentEmotion(emotionsDetected);
+                    alert(`Final dominant emotion: ${finalEmotion}`);
+                    window.location.href = `/play_video/${finalEmotion}`;
+                }
+            }, 15000);
+        });
+
+        stopBtn.addEventListener('click', () => {
+            detectionActive = false;
+            clearInterval(detectionInterval);
+            clearTimeout(detectionTimeout);
+            stopWebcam();
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            quoteDiv.textContent = 'Detection stopped.';
+            genderDiv.textContent = '';
+        });
+    </script>
+</body>
+</html>
