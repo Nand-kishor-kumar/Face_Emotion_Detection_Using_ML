@@ -1,1 +1,1 @@
-downlao all python library
+download all python library
